@@ -22,7 +22,7 @@ type LoginUserStruct struct {
 	Username string `json:"username"`
 }
 
-var BASE = "http://localhost:8000/api/v1"
+var BASE = "http://server.arpa:8001/api/v1"
 
 type ResponseStruct struct {
 	Success bool   `json:"success"`
@@ -100,7 +100,7 @@ func LoginUser(_ context.Context, cmd *cli.Command) error {
 	if err != nil {
 		fmt.Print(err)
 	}
-	fmt.Print("User logged in successfully")
+	fmt.Println("User logged in successfully")
 	return nil
 }
 
@@ -139,7 +139,7 @@ func CreateKey(_ context.Context, cmd *cli.Command) error {
 	args := cmd.Args()
 	if args.Len() != 2 {
 		fmt.Print("name of the key and the key itself are required \n")
-		fmt.Print("Use the command as mentioned below: create service_name password")
+		fmt.Println("Use the command as mentioned below: create service_name password")
 		return errors.New("Not enough arguments provided")
 	}
 
@@ -210,10 +210,6 @@ type KeyResponse struct {
 }
 
 func ListKeys(_ context.Context, cmd *cli.Command) error {
-	// get the args
-	// there should be two args
-	// the name of the key and the key itself
-	// upon finding the absence, throw an error reminding them the correct use of the command
 	loggedIn, token := IsLoggedIn()
 	if !loggedIn {
 		fmt.Println("Please create an account or login to manage your keys")
@@ -246,6 +242,250 @@ func ListKeys(_ context.Context, cmd *cli.Command) error {
 
 	if resp.StatusCode != 200 {
 		fmt.Println("An unknown error occurred")
+	}
+	if resp.StatusCode == 200 {
+		for num, obj := range response {
+			fmt.Println(num, obj.Name)
+		}
+	}
+
+	return nil
+}
+
+type GetKeyStruct struct {
+	Password string `json:"password"`
+}
+
+func GetKey(_ context.Context, cmd *cli.Command) error {
+	// get the args
+	// there should be two args
+	// the name of the key and the key itself
+	// upon finding the absence, throw an error reminding them the correct use of the command
+	loggedIn, token := IsLoggedIn()
+	if !loggedIn {
+		fmt.Println("Please create an account or login to manage your keys")
+		return errors.New("Create an account to use this command or login ")
+	}
+
+	args := cmd.Args()
+	if args.Len() != 1 {
+		fmt.Println("Use the command as mentioned below: get service_name")
+		return errors.New("Not enough arguments provided")
+	}
+
+	// get the password from the user
+	var password string
+	fmt.Print("Enter your password: ")
+	_, err := fmt.Scan(&password)
+	// having confirmed that the arguments are provided. Let's construct the
+	if err != nil {
+		fmt.Println("Error reading your password. Please re-run the command")
+		return err
+	}
+
+	name := args.First()
+	// proceed with the construction of the struct
+	s := GetKeyStruct{Password: password}
+
+	// marshall the json
+
+	jsonBytes, err := json.Marshal(s)
+
+	// the golang http library takes an io.Reader instance for the body, therefore convert this
+	body := bytes.NewBuffer(jsonBytes)
+
+	url := BASE + "/app/key/" + name + "/"
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		fmt.Println("An error occurred while trying to create a reqeust")
+		return err
+	}
+	req.Header.Set("Authorization", "Token "+token)
+	req.Header.Set("Content-Type", "application/json")
+	c := &http.Client{}
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("An error occurred while trying to talk to the server")
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	// unmarshall the data from the body of the response
+	var response ResponseStruct
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		fmt.Println("An error occurred while trying to parse response from the server")
+		return err
+	}
+
+	if resp.StatusCode == 401 {
+		return errors.New("You have probably entered the wrong password. Please try again")
+	}
+	if response.Success == false {
+		fmt.Print(response.Message)
+		return nil
+	}
+	if resp.StatusCode == 200 {
+		fmt.Print(response.Key)
+	}
+
+	return nil
+}
+
+type UpdateKeyStruct struct {
+	Password string `json:"password"`
+	NewKey   string `json:"new_key"`
+}
+
+func UpdateKey(_ context.Context, cmd *cli.Command) error {
+	// get the args
+	// there should be two args
+	// the name of the key and the key itself
+	// upon finding the absence, throw an error reminding them the correct use of the command
+	loggedIn, token := IsLoggedIn()
+	if !loggedIn {
+		return errors.New("Create an account to use this command or login ")
+	}
+
+	args := cmd.Args()
+	if args.Len() != 2 {
+		fmt.Println("Use the command as mentioned below: update service_name new_key")
+		return errors.New("Not enough arguments provided")
+	}
+
+	// get the password from the user
+	var password string
+	fmt.Print("Enter your password: ")
+	_, err := fmt.Scan(&password)
+	// having confirmed that the arguments are provided. Let's construct the
+	if err != nil {
+		fmt.Println("Error reading your password. Please re-run the command")
+		return err
+	}
+
+	name := args.First()
+	new_key := args.Get(1)
+	// proceed with the construction of the struct
+	s := UpdateKeyStruct{Password: password, NewKey: new_key}
+
+	// marshall the json
+
+	jsonBytes, err := json.Marshal(s)
+
+	// the golang http library takes an io.Reader instance for the body, therefore convert this
+	body := bytes.NewBuffer(jsonBytes)
+
+	url := BASE + "/app/key/" + name + "/"
+	req, err := http.NewRequest("PATCH", url, body)
+	if err != nil {
+		fmt.Println("An error occurred while trying to create a reqeust")
+		return err
+	}
+	req.Header.Set("Authorization", "Token "+token)
+	req.Header.Set("Content-Type", "application/json")
+	c := &http.Client{}
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("An error occurred while trying to talk to the server")
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	// unmarshall the data from the body of the response
+	var response SimpleResponseStruct
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		fmt.Println("An error occurred while trying to parse response from the server")
+		return err
+	}
+
+	if resp.StatusCode == 401 {
+		return errors.New("You have probably entered the wrong password. Please try again")
+	}
+	if response.Success == false {
+		fmt.Print(response.Message)
+		return nil
+	}
+	if resp.StatusCode == 200 {
+		fmt.Print(response.Message)
+	}
+
+	return nil
+}
+
+type DeleteKeyStruct struct {
+	Password string `json:"password"`
+}
+
+func DeleteKey(_ context.Context, cmd *cli.Command) error {
+	// get the args
+	// there should be two args
+	// the name of the key and the key itself
+	// upon finding the absence, throw an error reminding them the correct use of the command
+	loggedIn, token := IsLoggedIn()
+	if !loggedIn {
+		return errors.New("Create an account to use this command or login ")
+	}
+
+	args := cmd.Args()
+	if args.Len() != 1 {
+		fmt.Println("Use the command as mentioned below: delete service_name")
+		return errors.New("Not enough arguments provided")
+	}
+
+	// get the password from the user
+	var password string
+	fmt.Print("Enter your password: ")
+	_, err := fmt.Scan(&password)
+	// having confirmed that the arguments are provided. Let's construct the
+	if err != nil {
+		fmt.Println("Error reading your password. Please re-run the command")
+		return err
+	}
+
+	name := args.First()
+	// proceed with the construction of the Response
+	s := DeleteKeyStruct{Password: password}
+	// marshall the json
+
+	jsonBytes, err := json.Marshal(s)
+
+	// the golang http library takes an io.Reader instance for the body, therefore convert this
+	body := bytes.NewBuffer(jsonBytes)
+
+	url := BASE + "/app/key/" + name + "/"
+	req, err := http.NewRequest("DELETE", url, body)
+	if err != nil {
+		fmt.Println("An error occurred while trying to create a reqeust")
+		return err
+	}
+	req.Header.Set("Authorization", "Token "+token)
+	req.Header.Set("Content-Type", "application/json")
+	c := &http.Client{}
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("An error occurred while trying to talk to the server")
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	// unmarshall the data from the body of the response
+	var response SimpleResponseStruct
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		fmt.Println("An error occurred while trying to parse response from the server")
+		return err
+	}
+
+	if resp.StatusCode == 401 {
+		return errors.New("You have probably entered the wrong password. Please try again")
+	}
+	if response.Success == false {
+		fmt.Print(response.Message)
+		return nil
 	}
 	if resp.StatusCode == 200 {
 		fmt.Print(response.Message)

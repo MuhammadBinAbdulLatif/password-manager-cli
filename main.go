@@ -22,6 +22,7 @@ func Auth() {
 							&cli.StringFlag{Name: "password", Required: true, Usage: "Your password"},
 							&cli.StringFlag{Name: "email", Required: true, Usage: "Your email"},
 						},
+						Usage:  "Create an account if you do not already have on by using this command. usage: create --useraname user_name --password your_password --email your@mail.com",
 						Action: CreateUser,
 					},
 					{
@@ -30,6 +31,7 @@ func Auth() {
 							&cli.StringFlag{Name: "username", Required: true, Usage: "Your username"},
 							&cli.StringFlag{Name: "password", Required: true, Usage: "Your password"},
 						},
+						Usage:  "login into an already created account. usage: create --useraname user_name --password your_password",
 						Action: LoginUser,
 					},
 
@@ -44,6 +46,26 @@ func Auth() {
 				Name:   "create",
 				Usage:  "Create a key to be stored in the database. We store your keys fully encrypted in our database, possible to be decrypted soley by password in your posession unknown to any other sould",
 				Action: CreateKey,
+			},
+			{
+				Name:   "list",
+				Usage:  "List all the stored keys so you can see which one exist in the database",
+				Action: ListKeys,
+			},
+			{
+				Name:   "get",
+				Usage:  "get the key (decrypted). usage: get service_name ",
+				Action: GetKey,
+			},
+			{
+				Name:   "update",
+				Usage:  "update the key stored in the database with the new one. usage: update service_name new_key ",
+				Action: UpdateKey,
+			},
+			{
+				Name:   "delete",
+				Usage:  "delete the key stored in the database. usage: delete service_name",
+				Action: DeleteKey,
 			},
 		},
 	}
