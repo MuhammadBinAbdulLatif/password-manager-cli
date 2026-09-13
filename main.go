@@ -32,7 +32,18 @@ func Auth() {
 						},
 						Action: LoginUser,
 					},
+
+					{
+						Name:   "logout",
+						Usage:  "Used to delete your keys stored in the cli. Use this to logout so that you can refresh tokens or create another account or do anything a logged out user could do",
+						Action: Logout,
+					},
 				},
+			},
+			{
+				Name:   "create",
+				Usage:  "Create a key to be stored in the database. We store your keys fully encrypted in our database, possible to be decrypted soley by password in your posession unknown to any other sould",
+				Action: CreateKey,
 			},
 		},
 	}
@@ -43,4 +54,5 @@ func Auth() {
 }
 func main() {
 	Auth()
+
 }
